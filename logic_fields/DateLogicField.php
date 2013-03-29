@@ -27,7 +27,7 @@ class DateLogicField extends LogicField {
 <script src="http://code.jquery.com/ui/1.10.2/jquery-ui.js"></script>
 					<script type="text/javascript">
 						$(document).ready(function(){
-							$(".date_field_'.$name.'").datepick();
+							$(".date_field_'.$name.'").datepicker();
 						});
 					</script>
 				';
