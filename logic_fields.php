@@ -58,5 +58,9 @@ $logic_fields = array (
 	, 'file_upload' => array (
 		'class' => 'FileUploadLogicField'
 	)
+	, 'date' => array(
+		'class' => 'DateLogicField'
+	)
+
 
 );

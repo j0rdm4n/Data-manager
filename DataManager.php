@@ -1,7 +1,9 @@
 <?php
 
 define('DM_PATH', dirname(__FILE__));
-define( 'DS', DIRECTORY_SEPARATOR );
+if(!defined('DS')) {
+	define( 'DS', DIRECTORY_SEPARATOR );
+}
 
 include_once DM_PATH.DS.'params.php';
 include_once DM_PATH.DS.'classes'.DS.'DBMysql.php';
