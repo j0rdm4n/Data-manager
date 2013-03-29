@@ -13,8 +13,8 @@ class LogicField extends DMObject {
 		$this->params[$param] = $value;
 	}
 	
-	function getParam($param) {
-		return (isset($this->params[$param])?$this->params[$param]:false);
+	function getParam($param, $default = false) {
+		return (isset($this->params[$param])?$this->params[$param]:$default);
 	}
 
 	function getURLString($link) {

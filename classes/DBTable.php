@@ -4,8 +4,8 @@ include_once DM_PATH.DS.'classes'.DS.'DMObject.php';
 
 class DBTable extends DMObject{
 	protected $table = '';
-	protected $ordering_field = '';
-	protected	$is_ordering_asc = 1;
+	protected $join_table = array();
+	protected $ordering_fields = '';
 	protected $limit_start = 0;
 	protected $limit = 0;
 	protected $table_fields = array();
@@ -20,12 +20,16 @@ class DBTable extends DMObject{
 		$this->where_conditions[] = $where_condition;
 	}
 	
-	function delete() {
+	function delete($table = false) {
 		$db = DBMysql::getInstance();
+
+		if($table === false) {
+			$table = $this->table;
+		}
 		
 		$where_str = $this->getWhereStr();
 		
-		$query = "DELETE FROM `{$this->table}` WHERE {$where_str} ";
+		$query = "DELETE FROM `{$table}` WHERE {$where_str} ";
 
 		$db->setQuery( $query );
 		$result = $db->query();
@@ -38,22 +42,42 @@ class DBTable extends DMObject{
 	
 	function loadData() {
 		$db = DBMysql::getInstance();
-		$fields_str = '`'.implode('`,`',$this->table_fields).'`';
+		$select_fields = array();
+		foreach($this->table_fields as $table_field) {
+			$select_fields[] = "`{$table_field['table']}`.`{$table_field['name']}`";
+		}
+		if(isset($this->join_table['name'])) {
+			$select_fields[] = "`{$this->join_table['name']}`.`{$this->join_table['key_field']}`";
+		}
+
 		$query = "
-			SELECT {$fields_str}
+			SELECT ".implode(',', $select_fields)."
 			FROM `{$this->table}`
 		";
+		if(isset($this->join_table['name'])) {
+			$query .= "
+				INNER JOIN `{$this->join_table['name']}` ON
+					`{$this->join_table['name']}`.`{$this->join_table['join_field']}`
+						= `{$this->table}`.`{$this->key_field}`
+			";
+		}
 		if ($this->where_conditions) {
 			$query .= ' WHERE '.$this->getWhereStr();
 		}
-		if ($this->ordering_field) {
-			$query .= " ORDER BY `{$this->ordering_field}` ";
-			$query .= ($this->is_ordering_asc?'':' DESC ');
+		if ($this->ordering_fields) {
+			$order_by_params = array();
+			foreach($this->ordering_fields as $field_info) {
+				$param = "`{$field_info['field']}`";
+				if(isset($field_info['is_asc']) && !$field_info['is_asc']) {
+					$param .= ' DESC ';
+				}
+				$order_by_params[] = $param;
+			}
+			$query .= " ORDER BY  ".implode(', ', $order_by_params);
 		}
 		if ($this->limit) {
 			$query .= " LIMIT {$this->limit_start}, {$this->limit} ";
 		}
-		
 		$db->setQuery( $query );
 		$result = $db->getArrays();
 
@@ -71,12 +95,16 @@ class DBTable extends DMObject{
 		return (isset($this->data[0][$field])?$this->data[0][$field]:false);
 	}
 	
-	function getUpdateFields() {
+	function getUpdateFields($table) {
 		$update_fields = array();
 		foreach ($this->table_fields as $field) {
-			if ($field != $this->key_field) {
-				$update_fields[] = $field;
+			if (
+				$field['name'] == $this->key_field
+				|| $field['table'] != $table
+			) {
+				continue;
 			}
+			$update_fields[] = $field['name'];
 		}
 		return $update_fields;
 	}
@@ -88,10 +116,10 @@ class DBTable extends DMObject{
 		return '';
 	}
 	
-	function insert($data) {
+	function insert($data, $table) {
 		$db = DBMysql::getInstance();
 		
-		$update_fields = $this->getUpdateFields();
+		$update_fields = $this->getUpdateFields($table);
 		foreach($update_fields as $key => $field) {
 			if (isset($data[$field])) {
 				$values[] = $data[$field];
@@ -110,8 +138,7 @@ class DBTable extends DMObject{
 		}
 		$values_str = implode(", ", $values);
 		
-		$query = "INSERT INTO `{$this->table}`( {$fields_str} ) VALUES ( {$values_str} )";
-//		var_dump($query);
+		$query = "INSERT INTO `{$table}`( {$fields_str} ) VALUES ( {$values_str} )";
 
 		$db->setQuery( $query );
 		$result = $db->query();
@@ -122,26 +149,33 @@ class DBTable extends DMObject{
 		return $result;
 	}
 	
-	function setOrderingField($ordering_field, $is_ordering_asc = 1) {
-		$this->ordering_field = $ordering_field;
-		$this->is_ordering_asc = $is_ordering_asc;
+	function setOrderingField($ordering_field, $is_asc = 1) {
+		$this->ordering_fields[] = array(
+			'field' => $ordering_field
+			, 'is_asc' => $is_asc
+		);
 	}
 	
-	function update($data) {
+	function update($data, $table) {
 		$db = DBMysql::getInstance();
 		
-		$update_fields = $this->getUpdateFields();
-		
+		$update_fields = $this->getUpdateFields($table);
+
 		$params = array();
 		foreach($update_fields as $field) {
 			if (isset($data[$field])) {
 				$params[] = " `{$field}` = '{$data[$field]}' ";
 			}
 		}
+
+		if(!$params) {
+			return true;
+		}
+
 		$params_str = implode(', ', $params);
 		$where_str = $this->getWhereStr();
 		
-		$query = "UPDATE `{$this->table}` SET {$params_str} WHERE {$where_str} ";
+		$query = "UPDATE `{$table}` SET {$params_str} WHERE {$where_str} ";
 
 		$db->setQuery( $query );
 		$result = $db->query();
@@ -152,13 +186,20 @@ class DBTable extends DMObject{
 		return $result;
 	}
 
-	function getTableRowsCount() {
+	function getRowsCount() {
 		$db = DBMysql::getInstance();
 
 		$query = "
 			SELECT COUNT(*)
 			FROM `{$this->table}`
 		";
+		if(isset($this->join_table['name'])) {
+			$query .= "
+				INNER JOIN `{$this->join_table['name']}` ON
+					`{$this->join_table['name']}`.`{$this->join_table['join_field']}`
+						= `{$this->table}`.`{$this->key_field}`
+			";
+		}
 		if ($this->where_conditions) {
 			$query .= ' WHERE '.$this->getWhereStr();
 		}

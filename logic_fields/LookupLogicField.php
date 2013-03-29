@@ -24,6 +24,7 @@ class LookupLogicField extends LogicField {
 		$lookup_table = $this->getParam('lookup_table');
 		$key_field = $this->getParam('key_field');
 		$values_field = $this->getParam('values_field');
+		$filters = $this->getParam('filters');
 
 		if (!$lookup_table || !$key_field || !$values_field) {
 			$name = $this->getParam('name');
@@ -34,10 +35,21 @@ class LookupLogicField extends LogicField {
 		$db = DBMysql::getInstance();
 		$query = " SELECT `{$key_field}`, `{$values_field}` FROM `{$lookup_table}` ";
 		
+		$where_params = array();
 		if ($mode == 'list' && $value) {
-			$query .= " WHERE `{$key_field}` = '{$value}' ";
+			$where_params[] = " `{$key_field}` = '{$value}' ";
 		}
-		
+
+		if($filters && is_array($filters)) {
+			foreach($filters as $filter) {
+				$where_params[] = " `{$filter['field']}` = '{$filter['value']}' ";
+			}
+		}
+
+		if($where_params) {
+			$query .= " WHERE ".implode(' AND ', $where_params);
+		}
+
 		$db->setQuery( $query );
 		$result = $db->getArrays();
 
@@ -57,7 +69,6 @@ class LookupLogicField extends LogicField {
 	}
 	
 	function getField() {
-		$value = $this->getParam('value');
 		$result = $this->loadItems();
 		if ($result === false) {
 			return false;
@@ -69,11 +80,18 @@ class LookupLogicField extends LogicField {
 				
 				$is_link = $this->getParam('is_link');
 				$link = $this->getParam('link');
+				$external_link = $this->getParam('external_link');
 				$key_field_value = $this->getParam('key_field_value');
 				if ($is_link && $link && $key_field_value) {
-					$link = str_replace('?', $key_field_value, $link);
+					$link = str_replace('*', $key_field_value, $link);
 					$link = $this->getURLString($link);
 					$field = '<a href="'.$link.'">'.$value.'</a>'."\n";
+				}elseif($external_link) {
+					$external_id = key($this->items);
+
+					$external_link = str_replace('*', $external_id, $external_link);
+					$external_link = $this->getURLString($external_link);
+					$field = '<a href="'.$external_link.'">'.$value.'</a>'."\n";
 				}else {
 					$field = $value;
 				}

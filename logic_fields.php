@@ -43,6 +43,9 @@ $logic_fields = array (
 	,'readonly_lookup' => array (
 		'class' => 'ReadonlyLookupLogicField'
 	)
+	,'readonly' => array (
+		'class' => 'ReadonlyLogicField'
+	)
 	,'many_to_many' => array (
 		'class' => 'ManyToManyLogicField'
 	)
@@ -51,6 +54,9 @@ $logic_fields = array (
 	)
 	, 'text_value' => array (
 		'class' => 'TextValueField'
+	)
+	, 'file_upload' => array (
+		'class' => 'FileUploadLogicField'
 	)
 
 );

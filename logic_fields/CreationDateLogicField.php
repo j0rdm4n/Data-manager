@@ -23,9 +23,10 @@ class CreationDateLogicField extends LogicField {
 				if (!$value) {
 					$field = 'Current data and time';
 				}else {
-					$field_obj = new HTMLInput();
-					$field_obj->addParams($this->params);
-					$field = $field_obj->getField();
+					$field = $value;
+//					$field_obj = new HTMLInput();
+//					$field_obj->addParams($this->params);
+//					$field = $field_obj->getField();
 				}
 				break;
 		}

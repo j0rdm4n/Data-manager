@@ -1,7 +1,10 @@
 <?php
-define('DM_DB_HOST', 'localhost');
-define('DM_DB_NAME', 'db_name');
-define('DM_DB_USER', 'db_user');
-define('DM_DB_PASS', 'db_user_pass');
 
-define('DM_BASE_URL', 'http://mydomain.com/');
+$config = CoreConfig::getInstance();
+
+define('DM_DB_HOST', $config->get('dbhost'));
+define('DM_DB_NAME', $config->get('dbname'));
+define('DM_DB_USER', $config->get('dbuser'));
+define('DM_DB_PASS', $config->get('dbpass'));
+
+define('DM_BASE_URL', base_url());

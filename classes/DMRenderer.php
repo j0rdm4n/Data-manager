@@ -15,7 +15,7 @@ class DMRenderer extends DMObject {
 		$this->fields_params = array_merge($this->fields_params, $params);
 	}
 
-	function afterSaveEvent($key_field_value) {
+	function triggerEvent($event, $key_field_value, $table) {
 		if ($this->loadLogicFields() === false) {
 			return false;
 		}
@@ -24,19 +24,24 @@ class DMRenderer extends DMObject {
 			if (!isset($this->data[$key])) {
 				$this->data[$key] = false;
 			}
-			$field_obj->setParam('key_field_value', $key_field_value);
-			$field_obj->setParam('value', $this->data[$key]);
 
-			if (method_exists($field_obj,'afterSave')) {
-				$result = $field_obj->afterSave();
-				if(!$result) {
-					return $result;
+			$field_table = $field_obj->getParam('db_table');
+
+			if (
+				$field_table == $table
+				&& method_exists($field_obj, $event)
+			) {
+				$field_obj->setParam('key_field_value', $key_field_value);
+				$field_obj->setParam('value', $this->data[$key]);
+
+				if($field_obj->$event() === false) {
+					return false;
 				}
 			}
 		}
 		return true;
 	}
-	
+
 	function getFields(){
 		if ($this->loadLogicFields() === false) {
 			return false;
@@ -81,6 +86,9 @@ class DMRenderer extends DMObject {
 			if($field_obj->getParam('use_null_when_empty') && empty($this->data[$key])) {
 				$this->data[$key] = null;
 			}
+			if($this->data[$key] === false) {
+				unset($this->data[$key]);
+			}
 		}
 		return $this->data;
 	}
@@ -91,7 +99,7 @@ class DMRenderer extends DMObject {
 		}
 		
 		include DM_PATH.DS.'logic_fields.php';
-		
+
 		foreach($this->fields as $key => $field) {
 			if (!isset($logic_fields[$field['type']])) {
 				$this->errors[] = " '{$field['type']}' is not defined in logic_fields.php ";
@@ -132,7 +140,7 @@ class DMRenderer extends DMObject {
 		foreach($this->fields_objects as $key => $field_obj) {
 			if ($data_row) {
 				$field_obj->setParam('key_field_value', $key_field_value);
-				$field_obj->setParam('dara_row', $data_row);
+				$field_obj->setParam('row_data', $data_row);
 				if (array_key_exists($key, $data_row)) {
 					$field_obj->setParam('value', $data_row[$key]);
 				}

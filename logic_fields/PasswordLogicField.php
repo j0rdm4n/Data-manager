@@ -18,18 +18,18 @@ class PasswordLogicField extends LogicField {
 				$field .= 'Please enter password twice in 2 fields below.<br />';
 			}
 
-			$field_obj = new HTMLHidden();
-			$field_obj->addParams($this->params);
-			$field .= $field_obj->getField();
+//			$field_obj = new HTMLHidden();
+//			$field_obj->addParams($this->params);
+//			$field .= $field_obj->getField();
 			
-			$this->params['name'] = 'new_pass';
+//			$this->params['name'] = 'new_pass';
 			$field_obj = new HTMLPassword();
 			$field_obj->addParams($this->params);
 			$field .= $field_obj->getField();
 			unset($field_obj);
 			$field .= '<br />';
 
-			$this->params['name'] = 'new_pass_confirm';
+			$this->params['name'] = 'pass_confirm';
 			$field_obj = new HTMLPassword();
 			$field_obj->addParams($this->params);
 			$field .= $field_obj->getField();
@@ -54,8 +54,19 @@ class PasswordLogicField extends LogicField {
 //		}
 		
 		$value = $this->getParam('value');
+		$is_use_salt = $this->getParam('is_use_salt', 1);
+
+		if(empty($value)) {
+			return false;
+		}
+
 		$value = htmlentities($value, ENT_QUOTES);
-		$salt = substr(md5(time() + rand()), 0, 10);
-		return md5($value.$salt).':'.$salt;
+		if($is_use_salt) {
+			$salt = substr(md5(time() + rand()), 0, 10);
+			return md5($value.$salt).':'.$salt;
+		}else {
+			return md5($value);
+		}
+
 	}
 }

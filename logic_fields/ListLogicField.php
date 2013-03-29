@@ -15,7 +15,7 @@ class ListLogicField extends LogicField {
 				}
 				break;
 			case 'single':
-				$this->params['size'] = 4;
+//				$this->params['size'] = 4;
 				$field_obj = new HTMLSelect();
 				$field_obj->addParams($this->params);
 				$field_obj->addItems($this->params['items']);

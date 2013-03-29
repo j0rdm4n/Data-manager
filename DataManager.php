@@ -16,8 +16,6 @@ class DataManager extends DBTable{
 	private $titles = array();
 	private $rendered_fields = array();
 	private $fields = array();
-	private $table_fields_params = array();
-	private $nondb_fields_params = array();
 	private $fields_params = array();
 	private $fields_prefix = '';
 	protected $profile = '';
@@ -34,15 +32,43 @@ class DataManager extends DBTable{
 		$this->fields_params[$param] = $value;
 	}
 	
-	function delete($key_value) {
+	function delete($key_value, $join_table_key_field_value = false) {
 		if( !$this->loadFields() ) {
 			return false;
 		}
-		
+
+		$delete_fields_params = array();
+		foreach($this->fields as $field) {
+			if ($field['type'] != 'key') {
+				$field = array_merge($field, $this->fields_params);
+				$delete_fields_params[] = $field;
+			}
+		}
+
+		$renderer = new DMRenderer();
+		$renderer->setFields($delete_fields_params);
+		$renderer->setFieldsPrefix($this->fields_prefix);
+		$renderer->triggerEvent('beforeDelete', $key_value, $this->table);
+
+		if(!empty($this->join_table['name'])) {
+//			$renderer->triggerEvent('beforeDelete', $join_table_key_field_value
+//					, $this->join_table['name']);
+
+			$this->where_conditions = array();
+			$this->addWhereCondition(
+				" `{$this->join_table['key_field']}` = '{$join_table_key_field_value}' "
+			);
+			$result = parent::delete($this->join_table['name']);
+			if(!$result) {
+				return false;
+			}
+		}
+
 		if ($this->key_field && $key_value) {
+			$this->where_conditions = array();
 			$this->addWhereCondition(" `{$this->key_field}` = '$key_value' ");
 			return parent::delete();
-		}		
+		}
 		return false;
 	}
 	
@@ -82,7 +108,7 @@ class DataManager extends DBTable{
 		}
 
 		if ($this->key_value && $this->key_field) {
-			$this->addWhereCondition(" `{$this->key_field}` = '$this->key_value' ");
+			$this->addWhereCondition(" `{$this->table}`.`{$this->key_field}` = '$this->key_value' ");
 		}
 
 		$this->limit = $this->items_per_page;
@@ -104,6 +130,8 @@ class DataManager extends DBTable{
 		$aditional_params = array (
 			'key_field' => $this->key_field
 			, 'mode' => $mode
+			, 'table' => $this->table
+			, 'join_table' => $this->join_table
 		);
 		$renderer->addParams($aditional_params);
 		$renderer->addParams($this->fields_params);
@@ -116,26 +144,22 @@ class DataManager extends DBTable{
 		return true;
 		
 	}
-	
-	function loadFields() {
-		if ($this->fields) {
-			return true;
-		}
-		
+
+	function loadProfile() {
 		if (!$this->profile) {
 			$this->errors[] = 'Profile not set';
 			return false;
 		}
-		
+
 		if (!$this->mode) {
 			$this->mode = 'list';
 		}
-		
+
 		$profile_file_path = DM_PATH.DS.'profiles'.DS.$this->profile.'.php';
 		if (! file_exists($profile_file_path) ) {
 			$this->errors[] = 'File '.$this->profile.'.php not found in profiles folder';
 			return false;
-			
+
 		}
 		include $profile_file_path;
 
@@ -143,24 +167,47 @@ class DataManager extends DBTable{
 		if(isset($table)) {
 			$this->table = $table;
 		}
-		
+
 		if (!isset($fields)) {
 			$this->errors[] = '"fields" array not found in '.$this->profile.'.php';
 			return false;
 		}
 		$this->fields = $fields;
-		
+
+		if(isset($join_table)) {
+			$this->join_table = $join_table;
+		}
+
+		return true;
+	}
+	
+	function loadFields() {
+		if ($this->fields) {
+			return true;
+		}
+
+		if(!$this->loadProfile()) {
+			return false;
+		}
+
 		foreach($this->fields as $key => $field) {
 			if (isset($field[$this->mode.'_mode']) && !$field[$this->mode.'_mode']) {
 				unset($this->fields[$key]);
 				continue;
 			}
-			if (!isset($field['non_db']) || !$field['non_db']) {
-				$this->table_fields[] = $field['name'];
-				$this->table_fields_params[] = $field;
-			}else {
-				$this->nondb_fields_params[] = $field;
+
+			$field_table = $this->table;
+			if(isset($field['db_table'])) {
+				$field_table = $field['db_table'];
 			}
+			$this->fields[$key]['db_table'] = $field_table;
+			if (empty($field['non_db'])) {
+				$this->table_fields[] = array(
+					'table' => $field_table
+					, 'name' => $field['name']
+				);
+			}
+
 			if (!isset($field['title'])) {
 				$field['title'] = $field['name'];
 			}
@@ -169,7 +216,7 @@ class DataManager extends DBTable{
 				$this->key_field = $field['name'];
 			}
 		}
-		
+
 		return true;
 	}
 	
@@ -207,32 +254,63 @@ class DataManager extends DBTable{
 
 		$this->key_value = (isset($data[$this->key_field])?$data[$this->key_field]:0);
 		if ($this->key_field && $this->key_value) {
-			$this->addWhereCondition(" `{$this->key_field}` = '$this->key_value' ");
-			$result = parent::update($data);
+			$this->addWhereCondition(" `{$this->key_field}` = '{$this->key_value}' ");
+			$result = parent::update($data, $this->table);
+			if(!$result) {
+				return $result;
+			}
+
+			$renderer->triggerEvent('afterSave', $this->key_value, $this->table);
+
+			if(!empty($this->join_table['name'])) {
+				$this->where_conditions = array();
+				$join_table_key_field_value = $data[$this->join_table['key_field']];
+				$this->addWhereCondition(
+					" `{$this->join_table['key_field']}` = '{$join_table_key_field_value}' "
+				);
+				$result = parent::update($data, $this->join_table['name']);
+				$renderer->triggerEvent('afterSave', $this->key_value, $this->table);
+			}
 		}else {
-			$result = parent::insert($data);
+			$result = parent::insert($data, $this->table);
 
 			$db = DBMysql::getInstance();
 			$this->key_value = $db->insertid();
+			if(!$result) {
+				return $result;
+			}
+
+			$renderer->triggerEvent('afterSave', $this->key_value, $this->table);
+
+			if(!empty($this->join_table['name'])) {
+				$this->table_fields[] = array(
+					'table' => $this->join_table['name']
+					, 'name' => $this->join_table['join_field']
+				);
+				$data[$this->join_table['join_field']] = $this->key_value;
+				$this->key_field = $this->join_table['key_field'];
+				$result = parent::insert($data, $this->join_table['name']);
+				$join_table_key_field_value = $db->insertid();
+				$renderer->triggerEvent('afterSave', $join_table_key_field_value
+					, $this->join_table['name']);
+			}
 		}
 
 		if(!$result) {
-
 			return $result;
 		}
-
-		$renderer->afterSaveEvent($this->key_value);
 
 		return $result;
 	}
 
 	function getPagesCount() {
-		$rows_count = $this->getTableRowsCount();
+		$this->loadProfile();
+		$rows_count = $this->getRowsCount();
 		if($rows_count === false) {
 			return false;
 		}
 
-		return ceil($rows_count / $this->items_per_page);
+		return (int) ceil($rows_count / $this->items_per_page);
 	}
 
 	function setFieldsPrefix($prefix) {
@@ -253,6 +331,10 @@ class DataManager extends DBTable{
 	
 	function setPage($page) {
 		$this->page = $page;
+	}
+
+	function getKeyValue() {
+		return $this->key_value;
 	}
 	
 }

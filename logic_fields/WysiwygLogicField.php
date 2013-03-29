@@ -1,5 +1,6 @@
 <?php
 include_once(DM_PATH.DS."logic_fields".DS."LogicField.php");
+include_once(DM_PATH.DS."html_fields".DS."HTMLTextarea.php");
 
 class WysiwygLogicField extends LogicField {
 	function getField() {
@@ -24,9 +25,16 @@ class WysiwygLogicField extends LogicField {
 
 				ob_start();
 ?>
-			
-<script type="text/javascript" src="/libraries/ckeditor/ckeditor.js"></script>
-<script type="text/javascript" src="/libraries/ckeditor/ckfinder/ckfinder.js"></script>
+
+<?php
+	if(!defined('CKEDITOR_LIB_JS_DEFINED')) {
+		define('CKEDITOR_LIB_JS_DEFINED', 1);
+?>
+	<script type="text/javascript" src="/libraries/ckeditor/ckeditor.js"></script>
+	<script type="text/javascript" src="/libraries/ckfinder/ckfinder.js"></script>
+<?php
+	}
+?>
 <script type="text/javascript">
 var editor = CKEDITOR.replace('<?php echo $name; ?>',
 	{
@@ -35,7 +43,12 @@ var editor = CKEDITOR.replace('<?php echo $name; ?>',
 
 	});
 
-CKFinder.setupCKEditor( editor, '/libraries/ckeditor/ckfinder/' ) ;
+CKFinder.setupCKEditor( editor, '/libraries/ckfinder/' ) ;
+
+editor.config['filebrowserBrowseUrl']='';
+editor.config['filebrowserImageBrowseUrl']='';
+editor.config['filebrowserFlashBrowseUrl']='';
+
 
 //AjexFileManager.init({
 //	returnTo: 'ckeditor',

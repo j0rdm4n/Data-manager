@@ -10,7 +10,18 @@ class InputLogicField extends LogicField {
 			case 'list':
 				$is_link = $this->getParam('is_link');
 				$link = $this->getParam('link');
-				$key_field_value = $this->getParam('key_field_value');
+				$key_field = $this->getParam('key_field');
+				if($key_field) {
+					$row_data = $this->getParam('row_data');
+					if(isset($row_data[$key_field])) {
+						$key_field_value = $row_data[$key_field];
+					}else {
+						$key_field_value = $this->getParam('key_field_value');
+					}
+				}else {
+					$key_field_value = $this->getParam('key_field_value');
+				}
+
 //					var_dump($key_field_value); exit;
 				if ($is_link && $link && $key_field_value) {
 					$link = str_replace('*', $key_field_value, $link);
