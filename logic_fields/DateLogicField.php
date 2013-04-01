@@ -6,6 +6,11 @@ class DateLogicField extends LogicField {
 	function getField() {
 		$value = $this->getParam('value');
 		$name = $this->getParam('name');
+
+		if($value == '0000-00-00') {
+			$value = '';
+			$this->setParam('value', '');
+		}
 		
 		switch($this->params['mode']) {
 			case 'list':
@@ -43,6 +48,9 @@ class DateLogicField extends LogicField {
 	
 	function getValue() {
 		$value = $this->getParam('value');
+		if(!$value) {
+			return $value;
+		}
 		return date('Y-m-d',strtotime($value));
 	}
 }
