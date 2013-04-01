@@ -121,7 +121,7 @@ class DBMysql {
 	public function query() {
 		$this->result = mysql_query($this->query,  $this->dbh);
 		if(!$this->result)  {
-			$this->error = mysql_error($this->dbh).'Query:'.$this->query;
+			$this->error = mysql_error($this->dbh).' Query:'.$this->query;
 			return false;
 		}
 		return true;
