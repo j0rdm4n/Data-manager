@@ -36,7 +36,7 @@ $fields = array (
 		, 'title' => 'E-mail'
 	)
 	, array (
-		'name' => 'is_contractor'
+		'name' => 'isContractor'
 		, 'type' => 'check'
 		, 'title' => 'Is contractor'
 	)
@@ -46,6 +46,18 @@ $fields = array (
 		, 'title' => 'Job title'
 		, 'list_mode' => 0
 	)
+	, array (
+		'name' => 'photoImage'
+		, 'type' => 'file_upload'
+		, 'title' => 'Photo'
+		, 'list_mode' => 0
+		//file upload field specific parameters
+		, 'upload_path' => $_SERVER["DOCUMENT_ROOT"].'/images/photos/'
+		, 'image_url' => '/images/photos/'
+		, 'max_filesize_mb' => 5
+		, 'allowed_ext' => 'jpg|jpeg|gif|png'
+	)
+
 	, array (
 		'name' => 'managing'
 		, 'type' => 'managing'
