@@ -68,9 +68,6 @@ class FileUploadLogicField extends LogicField {
 		$max_filesize_mb = $this->getParam('max_filesize_mb');
 		$allowed_ext = $this->getParam('allowed_ext');
 
-		if (!$file['name'] ) {
-			continue;
-		}
 		if($file['error'] != UPLOAD_ERR_OK) {
 			$this->errors[] = 'Error uploading file "'.$file['name'];
 			return false;
