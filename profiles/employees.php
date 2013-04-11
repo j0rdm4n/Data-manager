@@ -54,8 +54,14 @@ $fields = array (
 		//file upload field specific parameters
 		, 'upload_path' => $_SERVER["DOCUMENT_ROOT"].'/images/photos/'
 		, 'image_url' => '/images/photos/'
+		, 'download_url' => '/images/photos/'
 		, 'max_filesize_mb' => 5
 		, 'allowed_ext' => 'jpg|jpeg|gif|png'
+		, 'is_overwrite_existing' => 1
+		, 'is_delete_option' => 1
+		, 'is_delete_from_disk' => 1
+		, 'file_size_field' => 'file_size'
+		, 'is_size_in_human_readable_format' => 1
 	)
 
 	, array (
